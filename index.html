@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MIDNIGHT EXECUTORS — THE BLACK LEDGER</title>
+<meta name="description" content="MIDNIGHT EXECUTORS presents THE BLACK LEDGER — a 365-day record of discipline, execution and self-mastery. Pre-launch." />
+<style>
+:root{
+  --bg:#0B0B0B; --bg2:#151515; --surface:#242424;
+  --gold:#B08D57; --gold2:#D4B477; --ink:#E8E3D8;
+  --muted:#9a938a; --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);overflow-x:hidden;line-height:1.6}
+::selection{background:var(--gold);color:#0B0B0B}
+a{color:inherit}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--gold2);outline-offset:3px;border-radius:2px}
+
+/* ---------- 3D canvas ---------- */
+#gl{position:fixed;inset:0;z-index:0}
+#gl canvas{display:block;width:100%;height:100%}
+#gl-fallback{position:fixed;inset:0;z-index:0;display:none;
+  background:radial-gradient(120% 90% at 50% 10%,#1c1a16 0%,#0B0B0B 60%)}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(120% 100% at 50% 45%,transparent 40%,rgba(0,0,0,.72) 100%)}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
+
+/* ---------- nav ---------- */
+header{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  padding:20px clamp(20px,4vw,56px);transition:background .4s,backdrop-filter .4s}
+header.scrolled{background:rgba(11,11,11,.72);backdrop-filter:blur(14px);border-bottom:1px solid rgba(176,141,87,.16)}
+.wordmark{font-family:var(--serif);font-size:clamp(15px,1.4vw,19px);letter-spacing:.32em;text-transform:uppercase;
+  color:var(--ink);text-decoration:none;white-space:nowrap}
+.wordmark em{font-style:normal;color:var(--gold2)}
+nav.desktop{display:flex;gap:clamp(14px,2vw,30px)}
+nav.desktop a{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);text-decoration:none;
+  padding:6px 2px;border-bottom:1px solid transparent;transition:color .25s,border-color .25s}
+nav.desktop a:hover,nav.desktop a.active{color:var(--ink);border-color:var(--gold)}
+.burger{display:none;background:none;border:1px solid rgba(176,141,87,.35);color:var(--ink);width:44px;height:44px;
+  border-radius:2px;cursor:pointer;font-size:18px;line-height:1}
+.mobile-menu{position:fixed;inset:0;z-index:60;background:rgba(11,11,11,.97);display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:26px}
+.mobile-menu.open{display:flex}
+.mobile-menu a{font-family:var(--serif);font-size:26px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);text-decoration:none}
+.mobile-menu .close{position:absolute;top:22px;right:22px;background:none;border:1px solid rgba(176,141,87,.35);
+  color:var(--ink);width:44px;height:44px;border-radius:2px;cursor:pointer;font-size:18px}
+@media(max-width:900px){nav.desktop{display:none}.burger{display:block}}
+
+/* ---------- layout ---------- */
+main{position:relative;z-index:2}
+section.chapter{min-height:100vh;display:flex;align-items:center;padding:clamp(90px,12vh,150px) clamp(22px,6vw,90px);position:relative}
+.wrap{width:min(1180px,100%);margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:22px}
+h1,h2{font-family:var(--serif);font-weight:500;line-height:1.08;letter-spacing:.01em}
+h1{font-size:clamp(38px,6.4vw,84px)}
+h2{font-size:clamp(30px,4.6vw,58px);margin-bottom:26px}
+p.lead{font-size:clamp(16px,1.5vw,20px);color:var(--muted);max-width:56ch}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease}
+.reveal.in{opacity:1;transform:none}
+.gold{color:var(--gold2)}
+.cta-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:38px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:15px 30px;font-size:12px;letter-spacing:.24em;
+  text-transform:uppercase;text-decoration:none;cursor:pointer;border-radius:2px;transition:.3s;border:1px solid transparent}
+.btn-primary{background:var(--gold);color:#0B0B0B;border-color:var(--gold)}
+.btn-primary:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn-ghost{background:transparent;color:var(--ink);border-color:rgba(232,227,216,.28)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold2)}
+.note{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:18px}
+
+/* hero */
+#threshold{justify-content:flex-start}
+#threshold .wrap{max-width:900px}
+.scroll-cue{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;
+  align-items:center;gap:10px;color:var(--muted);font-size:10px;letter-spacing:.3em;text-transform:uppercase}
+.scroll-cue span{display:block;width:1px;height:52px;background:linear-gradient(var(--gold),transparent);animation:drop 2.2s infinite}
+@keyframes drop{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+.zerohour{margin-top:34px;font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--muted)}
+.zerohour b{color:var(--gold2);font-weight:500}
+
+/* philosophy / problem */
+.split{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(30px,5vw,80px);align-items:center}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+.quote{font-family:var(--serif);font-size:clamp(26px,3.4vw,44px);line-height:1.25;border-left:1px solid var(--gold);
+  padding-left:clamp(18px,3vw,34px)}
+.pillars{display:grid;gap:14px;margin-top:30px}
+.pillar{border:1px solid rgba(176,141,87,.18);background:rgba(21,21,21,.55);backdrop-filter:blur(6px);
+  padding:18px 22px;border-radius:2px}
+.pillar h3{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold2);margin-bottom:6px}
+.pillar p{font-size:14px;color:var(--muted)}
+.frags{display:grid;gap:12px}
+.frag{border:1px dashed rgba(232,227,216,.18);padding:16px 20px;color:var(--muted);font-size:14px;border-radius:2px}
+.frag b{color:var(--ink);font-weight:500}
+
+/* ledger reveal */
+#artifact{justify-content:center;text-align:center}
+.book-stage{perspective:1400px;margin:40px auto 10px;width:min(340px,72vw)}
+.book{position:relative;width:100%;aspect-ratio:2/3;transform-style:preserve-3d;
+  transform:rotateY(-24deg) rotateX(6deg);animation:float 7s ease-in-out infinite}
+@keyframes float{0%,100%{transform:rotateY(-24deg) rotateX(6deg) translateY(0)}50%{transform:rotateY(-18deg) rotateX(4deg) translateY(-14px)}}
+.book .cover{position:absolute;inset:0;background:linear-gradient(135deg,#181818,#0d0d0d 55%,#161616);
+  border:1px solid rgba(176,141,87,.4);border-radius:3px 8px 8px 3px;box-shadow:0 40px 80px rgba(0,0,0,.7),inset 0 0 60px rgba(0,0,0,.6)}
+.book .spine{position:absolute;left:-16px;top:0;bottom:0;width:16px;background:linear-gradient(#111,#1d1d1d);
+  border:1px solid rgba(176,141,87,.3);border-radius:3px 0 0 3px}
+.book .title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.book .title .t{font-family:var(--serif);font-size:clamp(17px,2.4vw,24px);letter-spacing:.3em;text-transform:uppercase;color:var(--gold2)}
+.book .title .rule{width:44px;height:1px;background:var(--gold)}
+.book .title .s{font-size:9px;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
+.book .pages{position:absolute;right:-7px;top:6px;bottom:6px;width:7px;
+  background:repeating-linear-gradient(#d8d2c4 0 2px,#b9b3a6 2px 3px);border-radius:0 2px 2px 0}
+
+/* system timeline */
+.quarters{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:44px}
+@media(max-width:860px){.quarters{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.quarters{grid-template-columns:1fr}}
+.q{border:1px solid rgba(176,141,87,.2);background:rgba(21,21,21,.6);padding:24px 20px;cursor:pointer;
+  border-radius:2px;text-align:left;transition:.3s;color:var(--ink)}
+.q:hover,.q[aria-selected="true"]{border-color:var(--gold);background:rgba(36,36,36,.75);transform:translateY(-4px)}
+.q .num{font-size:10px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
+.q h3{font-family:var(--serif);font-size:22px;margin:10px 0 8px;font-weight:500}
+.q p{font-size:13px;color:var(--muted)}
+.q-detail{margin-top:26px;border-left:1px solid var(--gold);padding:6px 0 6px 24px;min-height:96px}
+.q-detail h4{font-family:var(--serif);font-size:24px;font-weight:500;margin-bottom:8px}
+.q-detail p{color:var(--muted);max-width:62ch}
+
+/* daily demo */
+.daily{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:40px}
+@media(max-width:960px){.daily{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.daily{grid-template-columns:1fr}}
+.step{border:1px solid rgba(176,141,87,.18);background:rgba(21,21,21,.6);padding:20px 18px;border-radius:2px}
+.step .n{font-family:var(--serif);color:var(--gold2);font-size:26px}
+.step h3{font-size:12px;letter-spacing:.2em;text-transform:uppercase;margin:10px 0 8px;color:var(--ink)}
+.step p{font-size:13px;color:var(--muted)}
+.page-demo{margin-top:44px;border:1px solid rgba(176,141,87,.25);background:#101010;padding:clamp(20px,4vw,44px);border-radius:2px}
+.page-demo .row{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid rgba(232,227,216,.08);font-size:14px}
+.page-demo .row span:first-child{color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-size:11px}
+.page-demo .row span:last-child{color:var(--ink)}
+.page-demo .demo-tag{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
+
+/* value */
+.value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:40px}
+@media(max-width:900px){.value-grid{grid-template-columns:1fr}}
+.value{border:1px solid rgba(176,141,87,.18);background:rgba(21,21,21,.55);padding:26px 24px;border-radius:2px}
+.value h3{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold2);margin-bottom:10px}
+.value p{font-size:14px;color:var(--muted)}
+
+/* configurations */
+.configs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:40px}
+@media(max-width:900px){.configs{grid-template-columns:1fr}}
+.config{border:1px solid rgba(176,141,87,.2);background:rgba(21,21,21,.6);padding:28px 24px;border-radius:2px;position:relative}
+.config .tag{position:absolute;top:-11px;left:24px;background:var(--bg);padding:2px 10px;font-size:10px;
+  letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
+.config h3{font-family:var(--serif);font-size:24px;font-weight:500;margin-bottom:10px}
+.config p{font-size:13px;color:var(--muted)}
+.config .status{margin-top:16px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+
+/* manifesto */
+#manifesto{justify-content:center;text-align:center}
+.manifesto-lines{font-family:var(--serif);font-size:clamp(24px,3.6vw,46px);line-height:1.4;max-width:22ch;margin:0 auto}
+.manifesto-lines div{opacity:0;transform:translateY(20px);transition:1s ease}
+.manifesto-lines div.in{opacity:1;transform:none}
+
+/* signup */
+#invitation{justify-content:center;text-align:center}
+.signup{margin:40px auto 0;max-width:520px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.signup input{flex:1 1 260px;background:rgba(21,21,21,.8);border:1px solid rgba(176,141,87,.3);color:var(--ink);
+  padding:15px 18px;font-size:14px;border-radius:2px}
+.signup input::placeholder{color:#6f6a62}
+.consent{font-size:11px;color:var(--muted);margin-top:16px;max-width:52ch;margin-left:auto;margin-right:auto}
+.form-msg{margin-top:14px;font-size:12px;letter-spacing:.12em;min-height:18px}
+.form-msg.ok{color:var(--gold2)}
+.form-msg.err{color:#c96a5a}
+
+/* footer */
+footer{position:relative;z-index:2;background:#080808;border-top:1px solid rgba(176,141,87,.16);
+  padding:clamp(60px,9vh,110px) clamp(22px,6vw,90px) 40px}
+.foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:clamp(24px,4vw,60px);max-width:1180px;margin:0 auto}
+@media(max-width:800px){.foot-grid{grid-template-columns:1fr}}
+footer h4{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+footer ul{list-style:none;display:grid;gap:10px}
+footer a{color:var(--muted);text-decoration:none;font-size:13px;transition:color .25s}
+footer a:hover{color:var(--gold2)}
+.foot-bottom{max-width:1180px;margin:56px auto 0;padding-top:24px;border-top:1px solid rgba(232,227,216,.08);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:11px;color:#6f6a62;letter-spacing:.1em}
+.top-btn{position:fixed;right:22px;bottom:22px;z-index:55;width:48px;height:48px;border-radius:50%;
+  background:rgba(21,21,21,.85);border:1px solid rgba(176,141,87,.4);color:var(--gold2);cursor:pointer;
+  opacity:0;pointer-events:none;transition:.3s;font-size:16px}
+.top-btn.show{opacity:1;pointer-events:auto}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition-duration:.01ms!important}
+  .reveal,.manifesto-lines div{opacity:1!important;transform:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div id="gl" aria-hidden="true"></div>
+<div id="gl-fallback" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header id="siteHeader">
+  <a class="wordmark" href="#threshold">MIDNIGHT <em>EXECUTORS</em></a>
+  <nav class="desktop" aria-label="Primary">
+    <a href="#philosophy">Philosophy</a>
+    <a href="#artifact">The Ledger</a>
+    <a href="#system">The System</a>
+    <a href="#quarters">Four Quarters</a>
+    <a href="#invitation">Pre-Launch</a>
+  </nav>
+  <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false">☰</button>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+  <button class="close" id="closeMenu" aria-label="Close menu">✕</button>
+  <a href="#philosophy">Philosophy</a>
+  <a href="#artifact">The Ledger</a>
+  <a href="#system">The System</a>
+  <a href="#quarters">Four Quarters</a>
+  <a href="#invitation">Pre-Launch</a>
+</div>
+
+<main id="main">
+
+  <!-- 01 THRESHOLD -->
+  <section class="chapter" id="threshold" data-scene="0">
+    <div class="wrap">
+      <p class="eyebrow reveal">MIDNIGHT EXECUTORS · Pre-Launch</p>
+      <h1 class="reveal">THE WORLD DOES NOT CHANGE<br/>WHEN YOU <span class="gold">WISH.</span></h1>
+      <p class="lead reveal" style="margin-top:26px">It changes when your actions become a system.</p>
+      <div class="cta-row reveal">
+        <a class="btn btn-primary" href="#philosophy">Enter the System</a>
+        <a class="btn btn-ghost" href="#artifact">Discover the Ledger</a>
+      </div>
+      <p class="zerohour reveal">A study in discipline by <b>ZEROHOUR</b></p>
+    </div>
+    <div class="scroll-cue" aria-hidden="true">Scroll<span></span></div>
+  </section>
+
+  <!-- 02 PHILOSOPHY -->
+  <section class="chapter" id="philosophy" data-scene="1">
+    <div class="wrap split">
+      <div>
+        <p class="eyebrow reveal">01 — The Philosophy</p>
+        <h2 class="reveal">Motivation is temporary.<br/><span class="gold">Systems are permanent.</span></h2>
+        <p class="lead reveal">Inspiration arrives without warning and leaves the same way. A system remains: a structure you can return to on ordinary days, difficult days, and days when nothing feels possible.</p>
+        <div class="pillars reveal">
+          <div class="pillar"><h3>Discipline over impulse</h3><p>Decide the standard before the moment demands one.</p></div>
+          <div class="pillar"><h3>Structure over chaos</h3><p>Give intention a place to live, a sequence to follow, and a record to answer to.</p></div>
+          <div class="pillar"><h3>Repetition over intensity</h3><p>Consistent execution compounds where bursts of effort do not.</p></div>
+        </div>
+      </div>
+      <div class="quote reveal">“A record of what you actually do is more honest than a promise of what you intend to do.”</div>
+    </div>
+  </section>
+
+  <!-- 03 PROBLEM -->
+  <section class="chapter" id="problem" data-scene="2">
+    <div class="wrap split">
+      <div class="frags reveal" aria-hidden="true">
+        <div class="frag"><b>The plan exists.</b> The follow-through does not.</div>
+        <div class="frag"><b>Motivation returns.</b> Then it departs again.</div>
+        <div class="frag"><b>Effort is spent.</b> Progress is difficult to see.</div>
+        <div class="frag"><b>The restart begins.</b> Without a record of what changed.</div>
+        <div class="frag" style="border-style:solid;border-color:rgba(176,141,87,.4)"><b>The alternative:</b> structure, measurement, accountability.</div>
+      </div>
+      <div>
+        <p class="eyebrow reveal">02 — The Problem</p>
+        <h2 class="reveal">Intention without execution.</h2>
+        <p class="lead reveal">Many people do not lack ambition. They lack a reliable structure for converting intention into repeated action — and for reviewing what actually happened.</p>
+        <p class="lead reveal" style="margin-top:18px">Activity can feel productive. Execution is what can be recorded, reviewed, and refined.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 ARTIFACT -->
+  <section class="chapter" id="artifact" data-scene="3">
+    <div class="wrap">
+      <p class="eyebrow reveal">03 — The Artifact</p>
+      <h1 class="reveal" style="font-size:clamp(34px,5.4vw,72px)">NOT ANOTHER NOTEBOOK.</h1>
+      <p class="lead reveal" style="margin:22px auto 0;max-width:52ch">A structured record of discipline, execution and self-mastery.</p>
+      <div class="book-stage reveal" aria-hidden="true">
+        <div class="book">
+          <div class="spine"></div>
+          <div class="cover"></div>
+          <div class="pages"></div>
+          <div class="title">
+            <div class="t">The Black<br/>Ledger</div>
+            <div class="rule"></div>
+            <div class="s">365 Days · Execution Record</div>
+          </div>
+        </div>
+      </div>
+      <p class="note reveal">Conceptual mockup. Final materials, dimensions and specifications will be announced at launch.</p>
+      <div class="cta-row reveal" style="justify-content:center">
+        <a class="btn btn-primary" href="#system">Explore the Black Ledger</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 SYSTEM -->
+  <section class="chapter" id="system" data-scene="4">
+    <div class="wrap">
+      <p class="eyebrow reveal">04 — Understand the System</p>
+      <h2 class="reveal">A 365-day record of<br/><span class="gold">discipline &amp; execution.</span></h2>
+      <p class="lead reveal">THE BLACK LEDGER is designed as a continuous framework: establish a structure, act on it, review it, and refine it across four quarters.</p>
+      <div class="quarters reveal" role="tablist" aria-label="Quarterly framework">
+        <button class="q" role="tab" aria-selected="true" aria-controls="qDetail" data-q="0"><span class="num">Quarter I</span><h3>Foundation</h3><p>Establish structure and consistency.</p></button>
+        <button class="q" role="tab" aria-selected="false" aria-controls="qDetail" data-q="1"><span class="num">Quarter II</span><h3>Expansion</h3><p>Strengthen execution and increase capacity.</p></button>
+        <button class="q" role="tab" aria-selected="false" aria-controls="qDetail" data-q="2"><span class="num">Quarter III</span><h3>Resilience</h3><p>Maintain discipline through difficulty and disruption.</p></button>
+        <button class="q" role="tab" aria-selected="false" aria-controls="qDetail" data-q="3"><span class="num">Quarter IV</span><h3>Mastery</h3><p>Consolidate the system and evaluate the journey.</p></button>
+      </div>
+      <div class="q-detail reveal" id="qDetail" role="tabpanel" aria-live="polite">
+        <h4>Quarter I — Foundation</h4>
+        <p>Establish the daily structure, define what execution means for you, and begin building a consistent record. The emphasis is on returning to the system, not on intensity.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 DAILY -->
+  <section class="chapter" id="daily" data-scene="5">
+    <div class="wrap">
+      <p class="eyebrow reveal">05 — The Daily Experience</p>
+      <h2 class="reveal">One day.<br/>One record.</h2>
+      <div class="daily reveal">
+        <div class="step"><div class="n">01</div><h3>Establish</h3><p>Set the day’s intention before the day sets its own agenda.</p></div>
+        <div class="step"><div class="n">02</div><h3>Plan</h3><p>Record the actions you intend to execute.</p></div>
+        <div class="step"><div class="n">03</div><h3>Measure</h3><p>Track the daily measures defined by the ledger.</p></div>
+        <div class="step"><div class="n">04</div><h3>Review</h3><p>Record completion and examine the outcome.</p></div>
+        <div class="step"><div class="n">05</div><h3>Refine</h3><p>Identify one improvement for tomorrow.</p></div>
+      </div>
+      <div class="page-demo reveal" aria-label="Sample daily ledger spread, demonstration only">
+        <p class="demo-tag">Demonstration layout — proposed, not final</p>
+        <div class="row"><span>Day</span><span>001 / 365</span></div>
+        <div class="row"><span>Intention</span><span>Execute the planned work before responding to noise.</span></div>
+        <div class="row"><span>Planned execution</span><span>Deep-work block · Training · Review</span></div>
+        <div class="row"><span>Daily measures</span><span>Recorded in the ledger’s daily framework</span></div>
+        <div class="row"><span>Completion</span><span>Recorded at day’s end</span></div>
+        <div class="row" style="border-bottom:none"><span>Reflection</span><span>What will be improved tomorrow?</span></div>
+      </div>
+      <p class="note reveal">Field names and scoring categories shown here are proposed demonstrations; final contents will be confirmed before launch.</p>
+    </div>
+  </section>
+
+  <!-- 07 QUARTERS -->
+  <section class="chapter" id="quarters" data-scene="6">
+    <div class="wrap">
+      <p class="eyebrow reveal">06 — The Quarterly Transformation</p>
+      <h2 class="reveal">From foundation<br/>to <span class="gold">mastery.</span></h2>
+      <div class="pillars reveal" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));display:grid">
+        <div class="pillar"><h3>Foundation</h3><p>Build the base: a repeatable structure, clear execution, and an honest daily record.</p></div>
+        <div class="pillar"><h3>Expansion</h3><p>Increase capacity deliberately while preserving the structure that made progress possible.</p></div>
+        <div class="pillar"><h3>Resilience</h3><p>Return to the system during disruption. Consistency is tested when conditions change.</p></div>
+        <div class="pillar"><h3>Mastery</h3><p>Consolidate the year: review patterns, retain what worked, and refine the standard.</p></div>
+      </div>
+      <p class="lead reveal" style="margin-top:30px">Each quarter is a stage of the same continuous practice — not a promise of a guaranteed outcome.</p>
+    </div>
+  </section>
+
+  <!-- 08 VALUE -->
+  <section class="chapter" id="value" data-scene="7">
+    <div class="wrap">
+      <p class="eyebrow reveal">07 — Value &amp; Differentiation</p>
+      <h2 class="reveal">A framework,<br/>not a blank page.</h2>
+      <div class="value-grid reveal">
+        <div class="value"><h3>Structured 365-day framework</h3><p>A defined continuity for recording discipline and execution across the year.</p></div>
+        <div class="value"><h3>A place for execution</h3><p>Record actions taken — not only intentions formed.</p></div>
+        <div class="value"><h3>Pattern review</h3><p>Return to the record to observe consistency and identify what to refine.</p></div>
+        <div class="value"><h3>Quarterly progression</h3><p>Four stages give the year a deliberate arc: Foundation, Expansion, Resilience, Mastery.</p></div>
+        <div class="value"><h3>Self-accountability</h3><p>The ledger is a personal standard you choose to answer to.</p></div>
+        <div class="value"><h3>More than blank pages</h3><p>Unlike an ordinary blank notebook, the framework provides structure, sequence and review points.</p></div>
+      </div>
+      <p class="note reveal">THE BLACK LEDGER is a tool for structured record-keeping. It does not guarantee habits, outcomes, or personal results.</p>
+    </div>
+  </section>
+
+  <!-- 09 CONFIGURATIONS -->
+  <section class="chapter" id="formats" data-scene="8">
+    <div class="wrap">
+      <p class="eyebrow reveal">08 — Product Vision</p>
+      <h2 class="reveal">Physical &amp; digital,<br/>in development.</h2>
+      <p class="lead reveal">Planned configurations are being developed. Availability, contents, pricing and delivery information will be confirmed at launch.</p>
+      <div class="configs reveal">
+        <div class="config"><span class="tag">Planned</span><h3>Printable PDF Edition</h3><p>A printable edition intended for those who prefer to assemble their own record.</p><div class="status">Details to be announced</div></div>
+        <div class="config"><span class="tag">Planned</span><h3>Digital / Soft-Copy Package</h3><p>A digital package for use on personal devices, with the ledger’s core framework.</p><div class="status">Details to be announced</div></div>
+        <div class="config"><span class="tag">Concept</span><h3>Full Physical Kit</h3><p>A contemplated hardcover ledger, sand clock, and device-free work pouches. Not confirmed as available inventory.</p><div class="status">Concept — not yet manufactured</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 MANIFESTO -->
+  <section class="chapter" id="manifesto" data-scene="9">
+    <div class="wrap">
+      <p class="eyebrow reveal">09 — The Manifesto</p>
+      <div class="manifesto-lines">
+        <div>You do not need another promise to yourself.</div>
+        <div>You need a record of what you actually do.</div>
+        <div>A system you can return to.</div>
+        <div>A standard you can measure.</div>
+        <div>A process you can refine.</div>
+        <div>One day at a time.</div>
+        <div>One decision at a time.</div>
+        <div class="gold">One record at a time.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 INVITATION -->
+  <section class="chapter" id="invitation" data-scene="10">
+    <div class="wrap">
+      <p class="eyebrow reveal">10 — Pre-Launch Invitation</p>
+      <h1 class="reveal" style="font-size:clamp(32px,5vw,66px)">THE SYSTEM IS<br/><span class="gold">TAKING SHAPE.</span></h1>
+      <p class="lead reveal" style="margin:24px auto 0;max-width:54ch">Be among the first to receive the launch announcement, product details and confirmed release information.</p>
+      <form class="signup reveal" id="signupForm" novalidate>
+        <label class="sr-only" for="email">Email address</label>
+        <input type="email" id="email" name="email" placeholder="your@email.com" autocomplete="email" required />
+        <button class="btn btn-primary" type="submit">Join the Pre-Launch List</button>
+      </form>
+      <p class="form-msg" id="formMsg" role="status"></p>
+      <p class="consent reveal">By joining, you agree to receive pre-launch updates from MIDNIGHT EXECUTORS. You can unsubscribe at any time. Privacy policy and terms will be published before launch. This demo form does not transmit or store your email.</p>
+      <div class="cta-row reveal" style="justify-content:center">
+        <a class="btn btn-ghost" href="#artifact">Revisit the Ledger</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 12 FOOTER -->
+<footer id="footer">
+  <div class="foot-grid">
+    <div>
+      <a class="wordmark" href="#threshold">MIDNIGHT <em>EXECUTORS</em></a>
+      <p style="color:var(--muted);font-size:13px;margin-top:18px;max-width:36ch">Motivation is temporary; systems are permanent.</p>
+      <p style="color:#6f6a62;font-size:11px;letter-spacing:.24em;text-transform:uppercase;margin-top:22px">The Black Ledger · by ZEROHOUR</p>
+    </div>
+    <div>
+      <h4>Explore</h4>
+      <ul>
+        <li><a href="#philosophy">The Philosophy</a></li>
+        <li><a href="#artifact">The Ledger</a></li>
+        <li><a href="#system">The System</a></li>
+        <li><a href="#quarters">The Four Quarters</a></li>
+        <li><a href="#invitation">Pre-Launch</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Information</h4>
+      <ul>
+        <li><a href="#invitation">Join the Pre-Launch List</a></li>
+        <li><a href="#" aria-disabled="true">Privacy Policy — coming before launch</a></li>
+        <li><a href="#" aria-disabled="true">Terms — coming before launch</a></li>
+        <li><a href="#" aria-disabled="true">Contact / Support — placeholder</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>© <span id="year"></span> MIDNIGHT EXECUTORS. All rights reserved.</span>
+    <span>Pre-launch draft · No prices, stock or delivery dates published.</span>
+  </div>
+</footer>
+
+<button class="top-btn" id="topBtn" aria-label="Return to entry">↑</button>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile = matchMedia('(max-width: 760px)').matches;
+let renderer;
+try{
+  renderer = new THREE.WebGLRenderer({antialias:!isMobile, alpha:true, powerPreference:'high-performance'});
+}catch(e){
+  document.getElementById('gl').style.display='none';
+  document.getElementById('gl-fallback').style.display='block';
+}
+
+if(renderer){
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0B0B0B);
+  scene.fog = new THREE.FogExp2(0x0B0B0B, 0.055);
+  const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, .1, 200);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile?1.5:2));
+  renderer.setSize(innerWidth, innerHeight);
+  document.getElementById('gl').appendChild(renderer.domElement);
+
+  // lights
+  scene.add(new THREE.AmbientLight(0x1a1712, 1.4));
+  const key = new THREE.SpotLight(0xD4B477, 90, 60, .5, .6, 1.4);
+  key.position.set(0, 10, -6); scene.add(key);
+  const rim = new THREE.DirectionalLight(0x6a5a3e, .8); rim.position.set(-8,6,8); scene.add(rim);
+
+  const black = new THREE.MeshStandardMaterial({color:0x141414, roughness:.85, metalness:.15});
+  const dark  = new THREE.MeshStandardMaterial({color:0x0e0e0e, roughness:.95});
+  const gold  = new THREE.MeshStandardMaterial({color:0xB08D57, roughness:.35, metalness:.9, emissive:0x2a1f10, emissiveIntensity:.6});
+
+  // corridor: repeated monolith pairs receding in z
+  const corridor = new THREE.Group();
+  for(let i=0;i<14;i++){
+    const z = -i*9;
+    for(const s of [-1,1]){
+      const h = 7 + (i%3);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(2.2,h,2.2), i%4===0?gold:black);
+      m.position.set(s*(5.5+ (i%2)*1.4), h/2-2, z);
+      corridor.add(m);
+    }
+    if(i%3===0){
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(14,.18,.18), gold);
+      bar.position.set(0, 4.6, z); corridor.add(bar);
+    }
+  }
+  // floor
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80,220), dark);
+  floor.rotation.x = -Math.PI/2; floor.position.z=-60; corridor.add(floor);
+  // portal at far end
+  const portal = new THREE.Mesh(new THREE.TorusGeometry(4.2,.22,16,64), gold);
+  portal.position.set(0,3.4,-118); corridor.add(portal);
+  const portalGlow = new THREE.Mesh(new THREE.CircleGeometry(4,48),
+    new THREE.MeshBasicMaterial({color:0x2b2115, transparent:true, opacity:.85}));
+  portalGlow.position.set(0,3.4,-118.2); corridor.add(portalGlow);
+  scene.add(corridor);
+
+  // particles
+  const N = isMobile?260:650;
+  const pos = new Float32Array(N*3);
+  for(let i=0;i<N;i++){pos[i*3]=(Math.random()-.5)*36;pos[i*3+1]=Math.random()*12-1;pos[i*3+2]=-Math.random()*130;}
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const dust = new THREE.Points(pGeo, new THREE.PointsMaterial({color:0xD4B477,size:.055,transparent:true,opacity:.5,sizeAttenuation:true}));
+  scene.add(dust);
+
+  // camera path: dolly through corridor, slight lateral drift per scene
+  const sceneX = [0, 1.6, -1.8, 0, 2.2, -2.0, 1.2, -1.2, 0, 0, 0];
+  const sceneZ = [8, -8, -26, -44, -60, -74, -88, -100, -110, -114, -116];
+  let progress = 0, targetProgress = 0, mouseX=0, mouseY=0;
+
+  addEventListener('scroll', ()=>{
+    const max = document.documentElement.scrollHeight - innerHeight;
+    targetProgress = max>0 ? scrollY/max : 0;
+  }, {passive:true});
+  addEventListener('pointermove', e=>{
+    mouseX = (e.clientX/innerWidth - .5);
+    mouseY = (e.clientY/innerHeight - .5);
+  }, {passive:true});
+  addEventListener('resize', ()=>{
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  const clock = new THREE.Clock();
+  function tick(){
+    const t = clock.getElapsedTime();
+    progress += (targetProgress - progress) * (reduced?1:.06);
+    const idx = Math.min(sceneZ.length-1, Math.floor(progress*(sceneZ.length-1)));
+    const f = progress*(sceneZ.length-1) - idx;
+    const z = sceneZ[idx] + (sceneZ[Math.min(idx+1,sceneZ.length-1)]-sceneZ[idx])*f;
+    const x = sceneX[idx] + (sceneX[Math.min(idx+1,sceneX.length-1)]-sceneX[idx])*f;
+    camera.position.set(x + mouseX*1.2, 2.6 + mouseY*-.6 + Math.sin(t*.5)*.08, z);
+    camera.lookAt(x*.4, 3.0, z-24);
+    dust.rotation.y = t*.012;
+    portal.rotation.z = t*.08;
+    renderer.render(scene,camera);
+    requestAnimationFrame(tick);
+  }
+  if(reduced){ camera.position.set(0,2.6,8); camera.lookAt(0,3,-16); renderer.render(scene,camera); }
+  else tick();
+}
+
+/* ---------- UI ---------- */
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('in'); });
+},{threshold:.18});
+document.querySelectorAll('.reveal, .manifesto-lines div').forEach(el=>io.observe(el));
+
+// nav active state
+const links = [...document.querySelectorAll('nav.desktop a')];
+const sections = links.map(a=>document.querySelector(a.getAttribute('href')));
+const navIO = new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    if(e.isIntersecting){
+      links.forEach(l=>l.classList.toggle('active', l.getAttribute('href')==='#'+e.target.id));
+    }
+  });
+},{rootMargin:'-40% 0px -55% 0px'});
+sections.forEach(s=>s&&navIO.observe(s));
+
+// header + top button
+const header=document.getElementById('siteHeader'), topBtn=document.getElementById('topBtn');
+addEventListener('scroll',()=>{
+  header.classList.toggle('scrolled', scrollY>40);
+  topBtn.classList.toggle('show', scrollY>innerHeight);
+},{passive:true});
+topBtn.addEventListener('click',()=>scrollTo({top:0,behavior:reduced?'auto':'smooth'}));
+
+// mobile menu
+const menu=document.getElementById('mobileMenu'), burger=document.getElementById('burger');
+function setMenu(open){menu.classList.toggle('open',open);burger.setAttribute('aria-expanded',open);}
+burger.addEventListener('click',()=>setMenu(true));
+document.getElementById('closeMenu').addEventListener('click',()=>setMenu(false));
+menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));
+addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false);});
+
+// quarter tabs
+const qData=[
+ {t:'Quarter I — Foundation',p:'Establish the daily structure, define what execution means for you, and begin building a consistent record. The emphasis is on returning to the system, not on intensity.'},
+ {t:'Quarter II — Expansion',p:'Strengthen execution and deliberately increase capacity while preserving the structure that made early progress possible.'},
+ {t:'Quarter III — Resilience',p:'Maintain discipline through difficulty and disruption. The record becomes most valuable when conditions are no longer ideal.'},
+ {t:'Quarter IV — Mastery',p:'Consolidate the system: review the year’s patterns, retain what worked, and refine the standard going forward.'}
+];
+const qDetail=document.getElementById('qDetail');
+document.querySelectorAll('.q').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.q').forEach(b=>b.setAttribute('aria-selected','false'));
+    btn.setAttribute('aria-selected','true');
+    const d=qData[+btn.dataset.q];
+    qDetail.innerHTML='<h4>'+d.t+'</h4><p>'+d.p+'</p>';
+  });
+});
+
+// signup — demo only, no false success
+const form=document.getElementById('signupForm'), msg=document.getElementById('formMsg');
+form.addEventListener('submit',e=>{
+  e.preventDefault();
+  const email=document.getElementById('email').value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    msg.textContent='Please enter a valid email address.'; msg.className='form-msg err'; return;
+  }
+  msg.textContent='Demo state: email collection is not yet connected. No data was sent or stored.';
+  msg.className='form-msg ok';
+  form.reset();
+});
+
+document.getElementById('year').textContent=new Date().getFullYear();
+</script>
+</body>
+</html>
